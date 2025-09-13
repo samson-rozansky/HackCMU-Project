@@ -269,8 +269,14 @@ def _find_lane_for_key(key_label: str, keymap: list) -> Optional[int]:
 
 
 def _sleep_for_frame(frame_start: float, frame_time: float):
-    """Sleep to maintain target FPS."""
+    """Sleep to maintain target FPS with high precision."""
     elapsed = time.perf_counter() - frame_start
     sleep_time = max(0.0, frame_time - elapsed)
     if sleep_time > 0:
-        time.sleep(sleep_time)
+        # Use high-precision sleep for smoother animation
+        if sleep_time > 0.001:  # Only sleep if more than 1ms
+            time.sleep(sleep_time)
+        else:
+            # For very small sleep times, use busy wait for precision
+            while time.perf_counter() - frame_start < frame_time:
+                pass

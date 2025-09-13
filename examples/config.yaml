@@ -42,7 +42,7 @@ visual:
   long_note_body_char: "▓"
   long_note_head_char: "█"
   lane_spacing: 2           # spaces between lanes
-  fps_target: 60
+  fps_target: 120
 input:
   keybinds_file: "examples/keybinds.yaml"
 logging:
