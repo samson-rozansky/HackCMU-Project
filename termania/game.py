@@ -153,6 +153,7 @@ def _run_game_loop(
             t_now_ms = int((time.perf_counter() - t_game_start) * 1000)
             
             # Handle input
+            # Check for key presses
             input_events = input_handler.poll()
             for key_label, is_press, event_time_ms in input_events:
                 # Find lane for this key
@@ -160,7 +161,14 @@ def _run_game_loop(
                 if lane is not None:
                     if is_press:
                         scoring_engine.on_key_press(lane, event_time_ms)
-                    else:
+            
+            # Check for key releases (timeout-based)
+            release_events = input_handler.check_key_releases()
+            for key_label, is_press, event_time_ms in release_events:
+                # Find lane for this key
+                lane = _find_lane_for_key(key_label, input_handler.keymap)
+                if lane is not None:
+                    if not is_press:  # This is a release event
                         scoring_engine.on_key_release(lane, event_time_ms)
             
             # Update scoring (auto-miss overdue notes)

@@ -4,7 +4,7 @@ A terminal-based rhythm game that plays osu!mania beatmaps with falling notes, a
 
 ## Features
 
-- **osu!mania Support**: Plays `.osu` beatmap files with 4K, 5K, 6K, and 7K key layouts
+- **osu!mania Support**: Plays `.osu` and `.osz` beatmap files with 4K, 5K, 6K, and 7K key layouts
 - **Terminal Rendering**: Smooth falling notes rendered in ASCII characters
 - **Audio Synchronization**: Music plays in sync with gameplay using pygame
 - **Accurate Timing**: Precise judgment windows (MARV, PERF, GREAT, GOOD, OK, MISS)
@@ -25,8 +25,11 @@ A terminal-based rhythm game that plays osu!mania beatmaps with falling notes, a
 ### Basic Usage
 
 ```bash
-# Play a beatmap
+# Play a beatmap (.osu file)
 python -m termania play path/to/beatmap.osu
+
+# Play a beatmap (.osz file - will be automatically extracted)
+python -m termania play path/to/beatmap.osz
 
 # Use custom config
 python -m termania play path/to/beatmap.osu --config examples/config.yaml

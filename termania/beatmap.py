@@ -1,11 +1,13 @@
 """
-Beatmap parsing for osu!mania .osu files
+Beatmap parsing for osu!mania .osu and .osz files
 """
 
 from __future__ import annotations
 
 import enum
 import logging
+import tempfile
+import zipfile
 from pathlib import Path
 from typing import List, Optional
 
@@ -44,6 +46,55 @@ class ManiaBeatmap(BaseModel):
     timing_points: List[TimingPoint] = Field(default_factory=list)
     notes: List[ManiaNote] = Field(default_factory=list)
     total_length_ms: int = 0
+
+
+def extract_osz(osz_path: Path) -> tuple[Path, tempfile.TemporaryDirectory]:
+    """
+    Extract .osz file to temporary directory and return path to .osu file.
+    
+    Args:
+        osz_path: Path to .osz file
+        
+    Returns:
+        Tuple of (osu_file_path, temp_directory) where temp_directory needs to be cleaned up
+        
+    Raises:
+        FileNotFoundError: If .osz file doesn't exist
+        ValueError: If .osz file is invalid or doesn't contain .osu file
+    """
+    if not osz_path.exists():
+        raise FileNotFoundError(f"OSZ file not found: {osz_path}")
+    
+    if not osz_path.suffix.lower() == '.osz':
+        raise ValueError(f"File is not an .osz file: {osz_path}")
+    
+    # Create temporary directory for extraction
+    temp_dir = tempfile.mkdtemp(prefix="termania_osz_")
+    temp_path = Path(temp_dir)
+    
+    try:
+        # Extract the .osz file
+        with zipfile.ZipFile(osz_path, 'r') as zip_ref:
+            zip_ref.extractall(temp_path)
+        
+        # Find .osu file in extracted contents
+        osu_files = list(temp_path.glob("*.osu"))
+        
+        if not osu_files:
+            raise ValueError(f"No .osu file found in {osz_path}")
+        
+        if len(osu_files) > 1:
+            logging.warning(f"Multiple .osu files found in {osz_path}, using first one: {osu_files[0]}")
+        
+        return osu_files[0], tempfile.TemporaryDirectory(temp_path)
+        
+    except zipfile.BadZipFile:
+        raise ValueError(f"Invalid .osz file: {osz_path}")
+    except Exception as e:
+        # Clean up on error
+        import shutil
+        shutil.rmtree(temp_path, ignore_errors=True)
+        raise ValueError(f"Failed to extract .osz file: {e}")
 
 
 def parse_osu(osu_path: Path) -> ManiaBeatmap:

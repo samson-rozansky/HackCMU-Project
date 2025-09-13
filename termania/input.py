@@ -29,6 +29,7 @@ class InputHandler:
         # Track key states
         self._key_states = [False] * self.lane_count
         self._last_press_time = [0.0] * self.lane_count
+        self._key_release_timeout_ms = 20  # Consider key released after 20ms of no input
         
         # Normalize keymap to lowercase
         self.keymap = [key.lower() for key in keymap]
@@ -58,23 +59,42 @@ class InputHandler:
                 lane = self._find_lane_for_key(key_name)
                 
                 if lane is not None:
-                    # Determine if this is a press or release
-                    is_press = not self._key_states[lane]
-                    
-                    if is_press:
+                    # Check if this is a new press (key wasn't pressed before)
+                    if not self._key_states[lane]:
                         # Key pressed
                         self._key_states[lane] = True
                         self._last_press_time[lane] = current_time_ms
                         events.append((key_name, True, current_time_ms))
-                        logging.debug(f"Key pressed: {key_name} (lane {lane})")
+                        logging.debug(f"Key pressed: {key_name} (lane {lane}) at {current_time_ms}ms")
                     else:
-                        # Key released
-                        self._key_states[lane] = False
-                        events.append((key_name, False, current_time_ms))
-                        logging.debug(f"Key released: {key_name} (lane {lane})")
+                        # Key was already pressed, update the press time
+                        self._last_press_time[lane] = current_time_ms
         
         except Exception as e:
             logging.warning(f"Input polling error: {e}")
+        
+        return events
+    
+    def check_key_releases(self) -> List[Tuple[str, bool, int]]:
+        """
+        Check for key releases based on timeout.
+        
+        Returns:
+            List of (key_label, is_press, t_ms) tuples for key releases.
+        """
+        events = []
+        current_time_ms = int(time.perf_counter() * 1000)
+        
+        for lane in range(self.lane_count):
+            if self._key_states[lane]:
+                # Check if key has been held too long (consider it released)
+                time_since_press = current_time_ms - self._last_press_time[lane]
+                if time_since_press > self._key_release_timeout_ms:
+                    # Key released
+                    self._key_states[lane] = False
+                    key_name = self.keymap[lane]
+                    events.append((key_name, False, current_time_ms))
+                    logging.debug(f"Key released (timeout): {key_name} (lane {lane}) at {current_time_ms}ms")
         
         return events
     
