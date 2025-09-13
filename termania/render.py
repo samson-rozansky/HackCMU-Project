@@ -157,9 +157,9 @@ class Renderer:
         """Draw lanes and falling notes."""
         key_count = self.beatmap.key_count
         
-        # Build lane dividers efficiently - start from top of screen
+        # Build lane dividers efficiently - start from row 2 to avoid HUD overlap
         lane_output = []
-        for row in range(0, self.hit_line_row):
+        for row in range(2, self.hit_line_row):
             for lane_idx in range(key_count):
                 x = self.lane_x_positions[lane_idx]
                 lane_output.append(self.term.move(row, x) + self.cfg.visual.lanes_char_vertical)
@@ -185,14 +185,14 @@ class Renderer:
         x = self.lane_x_positions[note.column]
         
         if note.type == ManiaNoteType.TAP:
-            # Draw tap note
+            # Draw tap note - allow rendering from top of screen (row 0)
             print(self.term.move(row, x) + self.cfg.visual.note_char, end='')
         else:
             # Draw hold note
             # Head
             print(self.term.move(row, x) + self.cfg.visual.long_note_head_char, end='')
             
-            # Body (if visible)
+            # Body (if visible) - allow rendering from top of screen (row 0)
             if note.end_time_ms:
                 end_row = self._time_to_row(note.end_time_ms, t_ms)
                 for body_row in range(max(0, end_row), row):
