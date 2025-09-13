@@ -48,6 +48,7 @@ class Renderer:
             state: Current scoring state
         """
         # Clear screen
+        print("\033c")
         print(self.term.clear, end='')
         
         # Draw HUD at top
