@@ -157,9 +157,9 @@ class Renderer:
         """Draw lanes and falling notes."""
         key_count = self.beatmap.key_count
         
-        # Build lane dividers efficiently
+        # Build lane dividers efficiently - start from top of screen
         lane_output = []
-        for row in range(2, self.hit_line_row):
+        for row in range(0, self.hit_line_row):
             for lane_idx in range(key_count):
                 x = self.lane_x_positions[lane_idx]
                 lane_output.append(self.term.move(row, x) + self.cfg.visual.lanes_char_vertical)
@@ -179,7 +179,7 @@ class Renderer:
         # Calculate row position
         row = self._time_to_row(note.start_time_ms, t_ms)
         
-        if row < 2 or row >= self.hit_line_row:
+        if row < 0 or row >= self.hit_line_row:
             return  # Outside visible area
         
         x = self.lane_x_positions[note.column]
@@ -195,7 +195,7 @@ class Renderer:
             # Body (if visible)
             if note.end_time_ms:
                 end_row = self._time_to_row(note.end_time_ms, t_ms)
-                for body_row in range(max(2, end_row), row):
+                for body_row in range(max(0, end_row), row):
                     if body_row < self.hit_line_row:
                         print(self.term.move(body_row, x) + self.cfg.visual.long_note_body_char, end='')
     
