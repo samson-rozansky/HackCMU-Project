@@ -1,0 +1,25 @@
+osu file format v14
+
+[General]
+AudioFilename: sample.wav
+AudioLeadIn: 0
+Mode: 3
+
+[Metadata]
+Title: Sample Beatmap
+Artist: Termania
+Version: 4K Easy
+Creator: Spec
+
+[Difficulty]
+CircleSize: 4
+OverallDifficulty: 8
+
+[TimingPoints]
+0,500,4,2,0,100,1,0
+
+[HitObjects]
+64,192,1000,1,0,0:0:0:0:           # column 0 tap at 1000ms
+192,192,1200,1,0,0:0:0:0:          # column 1 tap
+320,192,1400,1,0,0:0:0:0:          # column 2 tap
+448,192,1600,128,0,2000:0:0:0:     # column 3 hold 1600->2000ms

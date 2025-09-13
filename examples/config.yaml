@@ -1,0 +1,49 @@
+version: 1
+audio:
+  master_volume: 0.8         # 0.0..1.0
+  music_volume: 1.0          # 0.0..1.0
+  offset_ms: 0               # global audio offset (+ delays audio)
+gameplay:
+  scroll_rows_per_second: 24  # visual speed (rows/sec)
+  chart_preload_ms: 2000      # how early notes can appear above the hit line
+  lead_in_ms: 1500            # show lanes before music starts
+  hit_line_row_from_bottom: 2 # row index of judgement line from bottom
+  miss_window_ms: 200         # absolute max; if |Δt| > miss -> MISS
+  windows_ms:                  # judgement windows (|Δt| thresholds)
+    MARV: 16
+    PERF: 34
+    GREAT: 67
+    GOOD: 100
+    OK: 150
+    MISS: 200
+  long_note_release_tolerance_ms: 80  # tail release window
+  fail_enabled: true
+  health_drain_per_second_idle: 0.0
+  health_gain:
+    MARV: 0.5
+    PERF: 0.4
+    GREAT: 0.2
+    GOOD: 0.0
+    OK: -0.2
+    MISS: -2.0
+  score_values:
+    MARV: 320
+    PERF: 300
+    GREAT: 200
+    GOOD: 100
+    OK: 50
+    MISS: 0
+  max_health: 100
+  fail_threshold: 0
+visual:
+  lanes_char_vertical: "│"
+  hit_line_char: "═"
+  note_char: "█"
+  long_note_body_char: "▓"
+  long_note_head_char: "█"
+  lane_spacing: 2           # spaces between lanes
+  fps_target: 60
+input:
+  keybinds_file: "examples/keybinds.yaml"
+logging:
+  level: "INFO"

@@ -1,0 +1,6 @@
+# Mapping by keycount; keys are literal characters pressed
+# Common defaults: 4K => D F J K, 7K => S D F J K L ;
+"4": ["d", "f", "j", "k"]
+"5": ["d", "f", "space", "j", "k"]
+"6": ["s", "d", "f", "j", "k", "l"]
+"7": ["s", "d", "f", "j", "k", "l", ";"]
