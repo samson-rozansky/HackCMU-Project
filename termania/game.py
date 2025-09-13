@@ -71,7 +71,7 @@ def run_game(osu_path: Path, cfg: AppConfig) -> None:
         )
         
         input_handler = InputHandler(term, keymap)
-        renderer = Renderer(term, beatmap, cfg)
+        renderer = Renderer(term, beatmap, cfg, keymap)
         scoring_engine = ScoringEngine(beatmap, cfg.gameplay)
         
         # Run game loop
@@ -86,6 +86,12 @@ def run_game(osu_path: Path, cfg: AppConfig) -> None:
             audio_player.cleanup()
         except Exception as e:
             logging.warning(f"Audio cleanup error: {e}")
+        
+        # Always restore terminal
+        try:
+            print('\033[?1049l', end='', flush=True)  # Disable alternate screen buffer
+        except Exception as e:
+            logging.warning(f"Terminal cleanup error: {e}")
 
 
 def _run_game_loop(
@@ -112,8 +118,10 @@ def _run_game_loop(
     # Load and prepare audio
     audio_player.load_music()
     
-    # Enter raw mode
+    # Enter raw mode and disable scrolling
     with term.cbreak(), term.hidden_cursor():
+        # Clear screen and disable scrolling
+        print('\033[2J\033[H\033[?1049h', end='', flush=True)  # Clear screen and enable alternate buffer
         state = GameState.LEAD_IN
         
         # Lead-in phase
@@ -198,11 +206,16 @@ def _run_game_loop(
             _render_failed_screen(term, renderer)
             logging.info("Game failed. Press any key to exit...")
             term.inkey()
+        
+        # Restore terminal
+        print('\033[?1049l', end='', flush=True)  # Disable alternate screen buffer
 
 
 def _render_lead_in(term: Terminal, renderer: Renderer, t_now_ms: int, lead_in_ms: int):
     """Render lead-in countdown screen."""
-    print(term.clear, end='')
+    # Properly clear the entire terminal screen
+    import os
+    os.system('clear' if os.name == 'posix' else 'cls')
     
     # Calculate countdown
     remaining_ms = lead_in_ms + t_now_ms
@@ -223,12 +236,19 @@ def _render_lead_in(term: Terminal, renderer: Renderer, t_now_ms: int, lead_in_m
     else:
         print(term.move(center_y, center_x - 3) + term.bright_green + "GO!" + term.normal)
     
+    # Show key controls
+    if renderer.keymap:
+        keys_text = "Keys: " + " ".join(key.upper() for key in renderer.keymap)
+        print(term.move(center_y + 2, center_x - len(keys_text) // 2) + term.bright_yellow + keys_text + term.normal)
+    
     print(end='', flush=True)
 
 
 def _render_failed_screen(term: Terminal, renderer: Renderer):
     """Render failed screen."""
-    print(term.clear, end='')
+    # Properly clear the entire terminal screen
+    import os
+    os.system('clear' if os.name == 'posix' else 'cls')
     
     # Center the failed message
     center_y = term.height // 2
@@ -249,8 +269,14 @@ def _find_lane_for_key(key_label: str, keymap: list) -> Optional[int]:
 
 
 def _sleep_for_frame(frame_start: float, frame_time: float):
-    """Sleep to maintain target FPS."""
+    """Sleep to maintain target FPS with high precision."""
     elapsed = time.perf_counter() - frame_start
     sleep_time = max(0.0, frame_time - elapsed)
     if sleep_time > 0:
-        time.sleep(sleep_time)
+        # Use high-precision sleep for smoother animation
+        if sleep_time > 0.001:  # Only sleep if more than 1ms
+            time.sleep(sleep_time)
+        else:
+            # For very small sleep times, use busy wait for precision
+            while time.perf_counter() - frame_start < frame_time:
+                pass

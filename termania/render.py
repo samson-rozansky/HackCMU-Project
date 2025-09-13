@@ -18,7 +18,7 @@ from .scoring import ScoreState
 class Renderer:
     """Terminal renderer for the rhythm game."""
     
-    def __init__(self, term: Terminal, beatmap: ManiaBeatmap, cfg: AppConfig):
+    def __init__(self, term: Terminal, beatmap: ManiaBeatmap, cfg: AppConfig, keymap: list = None):
         """
         Initialize renderer.
         
@@ -26,10 +26,12 @@ class Renderer:
             term: Blessed terminal instance
             beatmap: Parsed beatmap data
             cfg: Application configuration
+            keymap: List of key labels for each lane
         """
         self.term = term
         self.beatmap = beatmap
         self.cfg = cfg
+        self.keymap = keymap or []
         
         # Calculate lane positions
         self._calculate_lane_positions()
@@ -47,9 +49,8 @@ class Renderer:
             t_ms: Current time in milliseconds
             state: Current scoring state
         """
-        # Clear screen
-        print("\033c")
-        print(self.term.clear, end='')
+        # Use ANSI escape sequences for faster clearing (no system call)
+        print('\033[2J\033[H', end='')
         
         # Draw HUD at top
         self._draw_hud(t_ms, state)
@@ -60,10 +61,13 @@ class Renderer:
         # Draw hit line
         self._draw_hit_line()
         
+        # Draw key labels
+        self._draw_key_labels()
+        
         # Draw HUD at bottom
         self._draw_bottom_hud(state)
         
-        # Flush output
+        # Single flush at the end for maximum smoothness
         print(end='', flush=True)
     
     def draw_results(self, results: Dict[str, float | int | str]) -> None:
@@ -73,7 +77,9 @@ class Renderer:
         Args:
             results: Results dictionary from scoring engine
         """
-        print(self.term.clear, end='')
+        # Properly clear the entire terminal screen
+        import os
+        os.system('clear' if os.name == 'posix' else 'cls')
         
         # Center the results
         center_y = self.term.height // 2
@@ -135,27 +141,32 @@ class Renderer:
         
         # Center the title
         title_x = (self.term.width - len(title)) // 2
-        print(self.term.move(0, title_x) + self.term.bold + title + self.term.normal)
+        print(self.term.move(0, title_x) + self.term.bold + title + self.term.normal, end='')
         
         # Version below title
         version_x = (self.term.width - len(version)) // 2
-        print(self.term.move(1, version_x) + version)
+        print(self.term.move(1, version_x) + version, end='')
         
         # Timer (top right)
         minutes = t_ms // 60000
         seconds = (t_ms % 60000) // 1000
         timer = f"{minutes:02d}:{seconds:02d}"
-        print(self.term.move(0, self.term.width - len(timer)) + timer)
+        print(self.term.move(0, self.term.width - len(timer)) + timer, end='')
     
     def _draw_lanes_and_notes(self, t_ms: int):
         """Draw lanes and falling notes."""
         key_count = self.beatmap.key_count
         
-        # Draw lane dividers
+        # Build lane dividers efficiently - start from row 2 to avoid HUD overlap
+        lane_output = []
         for row in range(2, self.hit_line_row):
             for lane_idx in range(key_count):
                 x = self.lane_x_positions[lane_idx]
-                print(self.term.move(row, x) + self.cfg.visual.lanes_char_vertical)
+                lane_output.append(self.term.move(row, x) + self.cfg.visual.lanes_char_vertical)
+        
+        # Draw lanes in batch
+        if lane_output:
+            print(''.join(lane_output), end='')
         
         # Draw notes
         visible_notes = self._get_visible_notes(t_ms)
@@ -168,34 +179,56 @@ class Renderer:
         # Calculate row position
         row = self._time_to_row(note.start_time_ms, t_ms)
         
-        if row < 2 or row >= self.hit_line_row:
+        if row < 0 or row >= self.hit_line_row:
             return  # Outside visible area
         
         x = self.lane_x_positions[note.column]
         
         if note.type == ManiaNoteType.TAP:
-            # Draw tap note
-            print(self.term.move(row, x) + self.cfg.visual.note_char)
+            # Draw tap note - allow rendering from top of screen (row 0)
+            print(self.term.move(row, x) + self.cfg.visual.note_char, end='')
         else:
             # Draw hold note
             # Head
-            print(self.term.move(row, x) + self.cfg.visual.long_note_head_char)
+            print(self.term.move(row, x) + self.cfg.visual.long_note_head_char, end='')
             
-            # Body (if visible)
+            # Body (if visible) - allow rendering from top of screen (row 0)
             if note.end_time_ms:
                 end_row = self._time_to_row(note.end_time_ms, t_ms)
-                for body_row in range(max(2, end_row), row):
+                for body_row in range(max(0, end_row), row):
                     if body_row < self.hit_line_row:
-                        print(self.term.move(body_row, x) + self.cfg.visual.long_note_body_char)
+                        print(self.term.move(body_row, x) + self.cfg.visual.long_note_body_char, end='')
     
     def _draw_hit_line(self):
         """Draw the hit line."""
-        # Draw hit line across all lanes
+        # Draw hit line across all lanes efficiently
         start_x = self.lane_x_positions[0]
         end_x = self.lane_x_positions[-1]
         
+        hit_line_output = []
         for x in range(start_x, end_x + 1):
-            print(self.term.move(self.hit_line_row, x) + self.cfg.visual.hit_line_char)
+            hit_line_output.append(self.term.move(self.hit_line_row, x) + self.cfg.visual.hit_line_char)
+        
+        if hit_line_output:
+            print(''.join(hit_line_output), end='')
+    
+    def _draw_key_labels(self):
+        """Draw key labels below the hit line."""
+        if not self.keymap:
+            return
+        
+        # Draw key labels below the hit line efficiently
+        label_row = self.hit_line_row + 1
+        
+        key_output = []
+        for i, key in enumerate(self.keymap):
+            if i < len(self.lane_x_positions):
+                x = self.lane_x_positions[i]
+                # Display key in uppercase and highlighted
+                key_output.append(self.term.move(label_row, x) + self.term.bold + self.term.bright_blue + key.upper() + self.term.normal)
+        
+        if key_output:
+            print(''.join(key_output), end='')
     
     def _draw_bottom_hud(self, state: ScoreState):
         """Draw bottom HUD."""
@@ -203,12 +236,12 @@ class Renderer:
         
         # Score
         score_text = f"Score: {state.score:,}"
-        print(self.term.move(hud_y, 0) + score_text)
+        print(self.term.move(hud_y, 0) + score_text, end='')
         
         # Combo
         combo_text = f"Combo: {state.combo}"
         combo_x = len(score_text) + 2
-        print(self.term.move(hud_y, combo_x) + combo_text)
+        print(self.term.move(hud_y, combo_x) + combo_text, end='')
         
         # Accuracy
         accuracy = 0.0
@@ -217,13 +250,13 @@ class Renderer:
         
         accuracy_text = f"Accuracy: {accuracy:.2f}%"
         accuracy_x = combo_x + len(combo_text) + 2
-        print(self.term.move(hud_y, accuracy_x) + accuracy_text)
+        print(self.term.move(hud_y, accuracy_x) + accuracy_text, end='')
         
         # Health bar
         health_percent = (state.health / self.cfg.gameplay.max_health) * 100
         health_text = f"Health: {health_percent:.1f}%"
         health_x = self.term.width - len(health_text)
-        print(self.term.move(hud_y, health_x) + health_text)
+        print(self.term.move(hud_y, health_x) + health_text, end='')
     
     def _get_visible_notes(self, t_ms: int) -> List[ManiaNote]:
         """Get notes that should be visible at current time."""
