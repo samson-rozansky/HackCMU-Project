@@ -71,7 +71,7 @@ def run_game(osu_path: Path, cfg: AppConfig) -> None:
         )
         
         input_handler = InputHandler(term, keymap)
-        renderer = Renderer(term, beatmap, cfg)
+        renderer = Renderer(term, beatmap, cfg, keymap)
         scoring_engine = ScoringEngine(beatmap, cfg.gameplay)
         
         # Run game loop
@@ -222,6 +222,11 @@ def _render_lead_in(term: Terminal, renderer: Renderer, t_now_ms: int, lead_in_m
         print(term.move(center_y, center_x - len(countdown) // 2) + term.bright_blue + countdown + term.normal)
     else:
         print(term.move(center_y, center_x - 3) + term.bright_green + "GO!" + term.normal)
+    
+    # Show key controls
+    if renderer.keymap:
+        keys_text = "Keys: " + " ".join(key.upper() for key in renderer.keymap)
+        print(term.move(center_y + 2, center_x - len(keys_text) // 2) + term.bright_yellow + keys_text + term.normal)
     
     print(end='', flush=True)
 

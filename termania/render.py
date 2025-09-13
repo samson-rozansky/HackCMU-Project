@@ -18,7 +18,7 @@ from .scoring import ScoreState
 class Renderer:
     """Terminal renderer for the rhythm game."""
     
-    def __init__(self, term: Terminal, beatmap: ManiaBeatmap, cfg: AppConfig):
+    def __init__(self, term: Terminal, beatmap: ManiaBeatmap, cfg: AppConfig, keymap: list = None):
         """
         Initialize renderer.
         
@@ -26,10 +26,12 @@ class Renderer:
             term: Blessed terminal instance
             beatmap: Parsed beatmap data
             cfg: Application configuration
+            keymap: List of key labels for each lane
         """
         self.term = term
         self.beatmap = beatmap
         self.cfg = cfg
+        self.keymap = keymap or []
         
         # Calculate lane positions
         self._calculate_lane_positions()
@@ -58,6 +60,9 @@ class Renderer:
         
         # Draw hit line
         self._draw_hit_line()
+        
+        # Draw key labels
+        self._draw_key_labels()
         
         # Draw HUD at bottom
         self._draw_bottom_hud(state)
@@ -195,6 +200,20 @@ class Renderer:
         
         for x in range(start_x, end_x + 1):
             print(self.term.move(self.hit_line_row, x) + self.cfg.visual.hit_line_char)
+    
+    def _draw_key_labels(self):
+        """Draw key labels below the hit line."""
+        if not self.keymap:
+            return
+        
+        # Draw key labels below the hit line
+        label_row = self.hit_line_row + 1
+        
+        for i, key in enumerate(self.keymap):
+            if i < len(self.lane_x_positions):
+                x = self.lane_x_positions[i]
+                # Display key in uppercase and highlighted
+                print(self.term.move(label_row, x) + self.term.bold + self.term.bright_blue + key.upper() + self.term.normal)
     
     def _draw_bottom_hud(self, state: ScoreState):
         """Draw bottom HUD."""
