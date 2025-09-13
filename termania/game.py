@@ -86,6 +86,12 @@ def run_game(osu_path: Path, cfg: AppConfig) -> None:
             audio_player.cleanup()
         except Exception as e:
             logging.warning(f"Audio cleanup error: {e}")
+        
+        # Always restore terminal
+        try:
+            print('\033[?1049l', end='', flush=True)  # Disable alternate screen buffer
+        except Exception as e:
+            logging.warning(f"Terminal cleanup error: {e}")
 
 
 def _run_game_loop(
@@ -112,8 +118,10 @@ def _run_game_loop(
     # Load and prepare audio
     audio_player.load_music()
     
-    # Enter raw mode
+    # Enter raw mode and disable scrolling
     with term.cbreak(), term.hidden_cursor():
+        # Clear screen and disable scrolling
+        print('\033[2J\033[H\033[?1049h', end='', flush=True)  # Clear screen and enable alternate buffer
         state = GameState.LEAD_IN
         
         # Lead-in phase
@@ -198,11 +206,16 @@ def _run_game_loop(
             _render_failed_screen(term, renderer)
             logging.info("Game failed. Press any key to exit...")
             term.inkey()
+        
+        # Restore terminal
+        print('\033[?1049l', end='', flush=True)  # Disable alternate screen buffer
 
 
 def _render_lead_in(term: Terminal, renderer: Renderer, t_now_ms: int, lead_in_ms: int):
     """Render lead-in countdown screen."""
-    print(term.clear, end='')
+    # Properly clear the entire terminal screen
+    import os
+    os.system('clear' if os.name == 'posix' else 'cls')
     
     # Calculate countdown
     remaining_ms = lead_in_ms + t_now_ms
@@ -233,7 +246,9 @@ def _render_lead_in(term: Terminal, renderer: Renderer, t_now_ms: int, lead_in_m
 
 def _render_failed_screen(term: Terminal, renderer: Renderer):
     """Render failed screen."""
-    print(term.clear, end='')
+    # Properly clear the entire terminal screen
+    import os
+    os.system('clear' if os.name == 'posix' else 'cls')
     
     # Center the failed message
     center_y = term.height // 2

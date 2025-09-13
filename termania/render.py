@@ -49,8 +49,9 @@ class Renderer:
             t_ms: Current time in milliseconds
             state: Current scoring state
         """
-        # Clear screen
-        print(self.term.clear, end='')
+        # Properly clear the entire terminal screen
+        import os
+        os.system('clear' if os.name == 'posix' else 'cls')
         
         # Draw HUD at top
         self._draw_hud(t_ms, state)
@@ -67,7 +68,7 @@ class Renderer:
         # Draw HUD at bottom
         self._draw_bottom_hud(state)
         
-        # Flush output
+        # Final flush for smooth animation
         print(end='', flush=True)
     
     def draw_results(self, results: Dict[str, float | int | str]) -> None:
@@ -77,7 +78,9 @@ class Renderer:
         Args:
             results: Results dictionary from scoring engine
         """
-        print(self.term.clear, end='')
+        # Properly clear the entire terminal screen
+        import os
+        os.system('clear' if os.name == 'posix' else 'cls')
         
         # Center the results
         center_y = self.term.height // 2
